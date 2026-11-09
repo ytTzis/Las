@@ -1,0 +1,40 @@
+# Unity generated directories
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Ll]ogs/
+UserSettings/
+MemoryCaptures/
+Recordings/
+
+# Builds
+[Bb]uild/
+[Bb]uilds/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+
+# Unity generated files
+*.tmp
+*.bak
+*.user
+*.apk
+*.aab
+*.unitypackage
+
+# Operating system
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Crash reports
+sysinfo.txt
