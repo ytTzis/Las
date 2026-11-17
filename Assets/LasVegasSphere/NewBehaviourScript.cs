@@ -9,7 +9,7 @@ public sealed class NewBehaviourScript : MonoBehaviour
 {
     private void Awake()
     {
-        if (FindObjectOfType<AudioVisualSyncExperiment>() == null)
+        if (FindObjectOfType<ExperimentManager>() == null)
         {
             SphereVenueFactory.Build(transform.GetComponent<Camera>());
         }

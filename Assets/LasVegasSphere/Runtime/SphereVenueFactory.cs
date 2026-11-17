@@ -11,6 +11,8 @@ public static class SphereVenueFactory
         Material stage = MakeMaterial("Stage", new Color(0.035f, 0.045f, 0.075f), 0.65f, 0.45f);
         Material cyan = MakeMaterial("ExperimentCyan", new Color(0.03f, 0.45f, 0.75f), 0.4f, 0.2f, true);
         Material magenta = MakeMaterial("ExperimentMagenta", new Color(0.8f, 0.06f, 0.38f), 0.4f, 0.2f, true);
+        Material orange = MakeMaterial("ExplosionOrange", new Color(1f, 0.16f, 0.01f), 0.1f, 0.2f, true);
+        Material aircraft = MakeMaterial("Aircraft", new Color(0.28f, 0.32f, 0.38f), 0.75f, 0.65f);
 
         CreateMeshObject("Spherical LED Screen", root.transform,
             CreateSphericalSector(28f, 34, 72, 6f, 122f, -112f, 112f), screenMaterial,
@@ -23,9 +25,9 @@ public static class SphereVenueFactory
         BuildFloor(root.transform, dark);
         BuildStage(root.transform, stage, cyan);
         BuildAudience(root.transform, dark);
-        BuildExperiment(root.transform, cyan, magenta);
         BuildLights(root.transform);
-        ConfigureCamera(existingCamera, root.transform);
+        Camera camera = ConfigureCamera(existingCamera, root.transform);
+        BuildExperimentSystem(root.transform, camera, cyan, magenta, orange, aircraft, stage);
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
         RenderSettings.ambientSkyColor = new Color(0.08f, 0.12f, 0.2f);
         RenderSettings.ambientEquatorColor = new Color(0.03f, 0.04f, 0.08f);
@@ -98,23 +100,124 @@ public static class SphereVenueFactory
         }
     }
 
-    private static void BuildExperiment(Transform root, Material leftMat, Material rightMat)
+    private static void BuildExperimentSystem(Transform root, Camera camera, Material cyan,
+        Material magenta, Material orange, Material aircraftMaterial, Material buildingMaterial)
     {
-        GameObject rig = new GameObject("Audio Visual Sync Experiment");
-        rig.transform.SetParent(root, false);
-        rig.transform.position = new Vector3(0f, 3.1f, 5.2f);
-        GameObject left = CreatePrimitive("Left Collider", PrimitiveType.Sphere, rig.transform,
-            new Vector3(-3.5f, 0f, 0f), new Vector3(1.25f, 1.25f, 1.25f), leftMat);
-        GameObject right = CreatePrimitive("Right Collider", PrimitiveType.Sphere, rig.transform,
-            new Vector3(3.5f, 0f, 0f), new Vector3(1.25f, 1.25f, 1.25f), rightMat);
-        Material orbMat = MakeMaterial("ImpactOrb", new Color(0.05f, 0.25f, 0.4f), 0.2f, 0.1f, true);
-        GameObject orb = CreatePrimitive("Impact Flash", PrimitiveType.Sphere, rig.transform,
-            Vector3.zero, Vector3.one * 0.35f, orbMat);
-        AudioSource audio = rig.AddComponent<AudioSource>();
-        audio.playOnAwake = false;
-        audio.spatialBlend = 0f;
-        AudioVisualSyncExperiment experiment = rig.AddComponent<AudioVisualSyncExperiment>();
-        experiment.Configure(left.transform, right.transform, orb.GetComponent<Renderer>());
+        GameObject systemRoot = new GameObject("Experiment System");
+        systemRoot.transform.SetParent(root, false);
+        DspEventScheduler scheduler = systemRoot.AddComponent<DspEventScheduler>();
+        SeatPositionManager seats = systemRoot.AddComponent<SeatPositionManager>();
+        ExperimentManager manager = systemRoot.AddComponent<ExperimentManager>();
+
+        Transform seatRoot = new GameObject("Seat Positions").transform;
+        seatRoot.SetParent(systemRoot.transform, false);
+        Transform screenCenterViewTarget = CreateFocusPoint("Screen Center View Target",
+            systemRoot.transform, new Vector3(0f, 7f, 9f));
+        Vector3[] seatPositions =
+        {
+            new Vector3(-6f, 2.0f, -1f), new Vector3(0f, 2.0f, -1f), new Vector3(6f, 2.0f, -1f),
+            new Vector3(-10f, 4.5f, -8f), new Vector3(0f, 4.5f, -8f), new Vector3(10f, 4.5f, -8f),
+            new Vector3(-14f, 7.0f, -15f), new Vector3(0f, 7.0f, -15f), new Vector3(14f, 7.0f, -15f)
+        };
+        Transform[] anchors = new Transform[seatPositions.Length];
+        for (int i = 0; i < seatPositions.Length; i++)
+        {
+            GameObject anchor = new GameObject(((SeatZone)i).ToString());
+            anchor.transform.SetParent(seatRoot, false);
+            anchor.transform.localPosition = seatPositions[i];
+            anchors[i] = anchor.transform;
+        }
+        seats.Configure(camera, anchors, screenCenterViewTarget);
+
+        Transform scenariosRoot = new GameObject("Scenarios").transform;
+        scenariosRoot.SetParent(systemRoot.transform, false);
+        ClapScenario clap = BuildClapScenario(scenariosRoot, cyan, magenta);
+        ExplosionScenario explosion = BuildExplosionScenario(scenariosRoot, orange, buildingMaterial);
+        AircraftScenario aircraft = BuildAircraftScenario(scenariosRoot, aircraftMaterial, cyan);
+        manager.Configure(scheduler, seats, new ExperimentScenarioBase[] { clap, explosion, aircraft });
+
+        clap.gameObject.SetActive(true);
+        explosion.gameObject.SetActive(false);
+        aircraft.gameObject.SetActive(false);
+    }
+
+    private static ClapScenario BuildClapScenario(Transform parent, Material leftMaterial, Material rightMaterial)
+    {
+        GameObject root = new GameObject("Clap Scenario");
+        root.transform.SetParent(parent, false);
+        root.transform.localPosition = new Vector3(0f, 3.1f, 5.2f);
+        GameObject left = CreatePrimitive("Left Hand Proxy", PrimitiveType.Sphere, root.transform,
+            new Vector3(-3.5f, 0f, 0f), new Vector3(1.25f, 1.25f, 1.25f), leftMaterial);
+        GameObject right = CreatePrimitive("Right Hand Proxy", PrimitiveType.Sphere, root.transform,
+            new Vector3(3.5f, 0f, 0f), new Vector3(1.25f, 1.25f, 1.25f), rightMaterial);
+        Material flashMaterial = MakeMaterial("ClapFlash", new Color(0.05f, 0.4f, 0.7f), 0f, 0.1f, true);
+        GameObject flash = CreatePrimitive("Clap Impact Flash", PrimitiveType.Sphere, root.transform,
+            Vector3.zero, Vector3.one * 0.2f, flashMaterial);
+        Transform focus = CreateFocusPoint("Clap Focus", root.transform, Vector3.zero);
+        AudioSource audio = flash.AddComponent<AudioSource>();
+        ClapScenario scenario = root.AddComponent<ClapScenario>();
+        scenario.ConfigureBase(ExperimentSceneType.Clap, audio, focus);
+        scenario.Configure(left.transform, right.transform, flash.GetComponent<Renderer>());
+        return scenario;
+    }
+
+    private static ExplosionScenario BuildExplosionScenario(Transform parent, Material explosionMaterial,
+        Material buildingMaterial)
+    {
+        GameObject root = new GameObject("Explosion Scenario");
+        root.transform.SetParent(parent, false);
+        root.transform.localPosition = new Vector3(0f, 0f, 8.5f);
+        GameObject building = CreatePrimitive("Building", PrimitiveType.Cube, root.transform,
+            new Vector3(0f, 4.2f, 0f), new Vector3(4.5f, 8.4f, 4.5f), buildingMaterial);
+        for (int floor = 0; floor < 7; floor++)
+        for (int column = -1; column <= 1; column++)
+            CreatePrimitive("Window", PrimitiveType.Cube, building.transform,
+                new Vector3(column * 0.23f, -0.34f + floor * 0.115f, -0.505f),
+                new Vector3(0.12f, 0.055f, 0.02f), explosionMaterial);
+
+        GameObject flash = CreatePrimitive("Explosion Flash", PrimitiveType.Sphere, root.transform,
+            new Vector3(0f, 4.2f, -2.5f), Vector3.one * 0.05f, explosionMaterial);
+        Light light = flash.AddComponent<Light>();
+        light.type = LightType.Point; light.color = new Color(1f, 0.35f, 0.05f); light.range = 24f; light.intensity = 0f;
+        Transform focus = CreateFocusPoint("Explosion Focus", root.transform, new Vector3(0f, 4.2f, 0f));
+        AudioSource audio = flash.AddComponent<AudioSource>();
+        ExplosionScenario scenario = root.AddComponent<ExplosionScenario>();
+        scenario.ConfigureBase(ExperimentSceneType.Explosion, audio, focus);
+        scenario.Configure(building.transform, flash.GetComponent<Renderer>(), light);
+        return scenario;
+    }
+
+    private static AircraftScenario BuildAircraftScenario(Transform parent, Material aircraftMaterial,
+        Material markerMaterial)
+    {
+        GameObject root = new GameObject("Aircraft Scenario");
+        root.transform.SetParent(parent, false);
+        GameObject aircraft = new GameObject("Aircraft");
+        aircraft.transform.SetParent(root.transform, false);
+        CreatePrimitive("Fuselage", PrimitiveType.Cube, aircraft.transform, Vector3.zero,
+            new Vector3(1.1f, 0.7f, 4.8f), aircraftMaterial);
+        CreatePrimitive("Wings", PrimitiveType.Cube, aircraft.transform, new Vector3(0f, 0f, 0.2f),
+            new Vector3(7.5f, 0.12f, 1.4f), aircraftMaterial);
+        CreatePrimitive("Tail Wing", PrimitiveType.Cube, aircraft.transform, new Vector3(0f, 0.45f, -1.9f),
+            new Vector3(3.1f, 0.12f, 0.8f), aircraftMaterial);
+        CreatePrimitive("Tail Fin", PrimitiveType.Cube, aircraft.transform, new Vector3(0f, 0.65f, -1.9f),
+            new Vector3(0.12f, 1.1f, 0.8f), aircraftMaterial);
+        GameObject marker = CreatePrimitive("Overhead Event Marker", PrimitiveType.Sphere, root.transform,
+            new Vector3(0f, 13f, 3f), Vector3.one * 0.08f, markerMaterial);
+        Transform focus = CreateFocusPoint("Aircraft Focus", root.transform, new Vector3(0f, 13f, 3f));
+        AudioSource audio = aircraft.AddComponent<AudioSource>();
+        AircraftScenario scenario = root.AddComponent<AircraftScenario>();
+        scenario.ConfigureBase(ExperimentSceneType.Aircraft, audio, focus);
+        scenario.Configure(aircraft.transform, marker.GetComponent<Renderer>());
+        return scenario;
+    }
+
+    private static Transform CreateFocusPoint(string name, Transform parent, Vector3 localPosition)
+    {
+        GameObject focus = new GameObject(name);
+        focus.transform.SetParent(parent, false);
+        focus.transform.localPosition = localPosition;
+        return focus.transform;
     }
 
     private static void BuildLights(Transform root)
@@ -124,7 +227,7 @@ public static class SphereVenueFactory
         CreateLight("Audience Glow", root, new Vector3(0f, 13f, -8f), new Color(0.35f, 0.25f, 1f), 2.2f, 75f, new Vector3(0f, 2f, 4f));
     }
 
-    private static void ConfigureCamera(Camera camera, Transform root)
+    private static Camera ConfigureCamera(Camera camera, Transform root)
     {
         if (camera == null)
         {
@@ -135,12 +238,13 @@ public static class SphereVenueFactory
             go.AddComponent<AudioListener>();
         }
         camera.transform.position = new Vector3(0f, 7.4f, -19.5f);
-        camera.transform.LookAt(new Vector3(0f, 5.8f, 7f));
+        camera.transform.LookAt(new Vector3(0f, 7f, 9f));
         camera.fieldOfView = 76f;
         camera.nearClipPlane = 0.08f;
         camera.farClipPlane = 100f;
         camera.backgroundColor = new Color(0.004f, 0.005f, 0.012f);
         camera.clearFlags = CameraClearFlags.SolidColor;
+        return camera;
     }
 
     private static Mesh CreateSphericalSector(float radius, int latSegments, int lonSegments,

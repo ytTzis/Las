@@ -15,20 +15,23 @@ public static class LasVegasSphereSceneBuilder
     {
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         GameObject root = SphereVenueFactory.Build();
+
+        // Generated assets are fully reproducible. Replacing this folder keeps
+        // repeated builds from accumulating duplicate materials and meshes.
+        if (AssetDatabase.IsValidFolder(GeneratedFolder)) AssetDatabase.DeleteAsset(GeneratedFolder);
+        AssetDatabase.CreateFolder("Assets/LasVegasSphere", "Generated");
         PersistGeneratedAssets(root);
+
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene, ScenePath);
-        Selection.activeGameObject = GameObject.Find("Audio Visual Sync Experiment");
+        Selection.activeGameObject = GameObject.Find("Experiment System");
         EditorUtility.DisplayDialog("Las Vegas Sphere",
             "Editable venue created and saved to:\n" + ScenePath +
-            "\n\nPress Play, choose 1–5, then press Space.", "OK");
+            "\n\nPress Play. Use Q/W/E for scenes, 1-5 for offsets, and Space to play.", "OK");
     }
 
     private static void PersistGeneratedAssets(GameObject root)
     {
-        if (!AssetDatabase.IsValidFolder(GeneratedFolder))
-            AssetDatabase.CreateFolder("Assets/LasVegasSphere", "Generated");
-
         var meshes = new Dictionary<Mesh, Mesh>();
         foreach (MeshFilter filter in root.GetComponentsInChildren<MeshFilter>(true))
         {
@@ -37,7 +40,8 @@ public static class LasVegasSphereSceneBuilder
             Mesh saved;
             if (!meshes.TryGetValue(source, out saved))
             {
-                string path = AssetDatabase.GenerateUniqueAssetPath(GeneratedFolder + "/" + Sanitize(source.name) + ".asset");
+                string path = AssetDatabase.GenerateUniqueAssetPath(
+                    GeneratedFolder + "/" + Sanitize(source.name) + ".asset");
                 saved = Object.Instantiate(source);
                 saved.name = source.name;
                 AssetDatabase.CreateAsset(saved, path);
@@ -57,7 +61,8 @@ public static class LasVegasSphereSceneBuilder
                 Material saved;
                 if (!materials.TryGetValue(source, out saved))
                 {
-                    string path = AssetDatabase.GenerateUniqueAssetPath(GeneratedFolder + "/" + Sanitize(source.name) + ".mat");
+                    string path = AssetDatabase.GenerateUniqueAssetPath(
+                        GeneratedFolder + "/" + Sanitize(source.name) + ".mat");
                     saved = Object.Instantiate(source);
                     saved.name = source.name;
                     AssetDatabase.CreateAsset(saved, path);
