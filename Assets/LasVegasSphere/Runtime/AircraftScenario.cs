@@ -4,9 +4,9 @@ public sealed class AircraftScenario : ExperimentScenarioBase
 {
     [SerializeField] private Transform aircraft;
     [SerializeField] private Renderer overheadMarker;
-    [SerializeField] private Vector3 startPoint = new Vector3(0f, 14f, 25f);
-    [SerializeField] private Vector3 overheadPoint = new Vector3(0f, 13f, 3f);
-    [SerializeField] private Vector3 endPoint = new Vector3(0f, 11f, -24f);
+    [SerializeField] private Vector3 startPoint = new Vector3(-24f, 12.5f, 10f);
+    [SerializeField] private Vector3 overheadPoint = new Vector3(0f, 12.5f, 10f);
+    [SerializeField] private Vector3 endPoint = new Vector3(24f, 12.5f, 10f);
     [SerializeField, Min(0.5f)] private float approachSeconds = 1.8f;
     [SerializeField, Min(0.5f)] private float departureSeconds = 1.8f;
 
@@ -15,6 +15,14 @@ public sealed class AircraftScenario : ExperimentScenarioBase
         aircraft = aircraftTransform;
         overheadMarker = marker;
         ResetVisual();
+    }
+
+    public override double ScheduleAudio(double audioDspTime)
+    {
+        // For the aircraft, the tested offset applies to the complete moving
+        // sound track. At 0 ms the engine begins exactly when the aircraft
+        // starts moving from the left side of the screen.
+        return base.ScheduleAudio(audioDspTime - approachSeconds);
     }
 
     protected override void ResetVisual()

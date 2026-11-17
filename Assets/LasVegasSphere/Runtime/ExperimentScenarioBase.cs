@@ -37,13 +37,14 @@ public abstract class ExperimentScenarioBase : MonoBehaviour
         OnTrialScheduled();
     }
 
-    public void ScheduleAudio(double audioDspTime)
+    public virtual double ScheduleAudio(double audioDspTime)
     {
         ConfigureSpatialAudio();
-        if (eventAudioSource == null) return;
+        if (eventAudioSource == null) return audioDspTime;
         if (eventClip == null) eventClip = CreateFallbackClip(sceneType);
         eventAudioSource.clip = eventClip;
         eventAudioSource.PlayScheduled(audioDspTime);
+        return audioDspTime;
     }
 
     public void SetEventClip(AudioClip clip) { eventClip = clip; }
@@ -74,7 +75,7 @@ public abstract class ExperimentScenarioBase : MonoBehaviour
     {
         const int sampleRate = 48000;
         float duration = type == ExperimentSceneType.Explosion ? 0.75f :
-            type == ExperimentSceneType.Aircraft ? 1.2f : 0.09f;
+            type == ExperimentSceneType.Aircraft ? 4.0f : 0.09f;
         int count = Mathf.CeilToInt(sampleRate * duration);
         float[] samples = new float[count];
 

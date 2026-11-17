@@ -24,11 +24,11 @@ public sealed class DspEventScheduler : MonoBehaviour
         double minimumLead = Math.Abs(OffsetsMilliseconds[0]) / 1000.0 + 0.25;
         LastVisualDspTime = now + Math.Max(scheduleLeadSeconds, minimumLead);
         LastOffsetMilliseconds = OffsetsMilliseconds[offsetIndex];
-        LastAudioDspTime = LastVisualDspTime + LastOffsetMilliseconds / 1000.0;
+        double requestedAudioDspTime = LastVisualDspTime + LastOffsetMilliseconds / 1000.0;
 
         scenario.PrepareTrial();
         scenario.ScheduleVisual(LastVisualDspTime);
-        scenario.ScheduleAudio(LastAudioDspTime);
+        LastAudioDspTime = scenario.ScheduleAudio(requestedAudioDspTime);
 
         Debug.LogFormat(
             "Trial scheduled | scene={0} | seat-independent visual={1:F6} | audio={2:F6} | offset={3:+#;-#;0} ms",

@@ -204,8 +204,8 @@ public static class SphereVenueFactory
         CreatePrimitive("Tail Fin", PrimitiveType.Cube, aircraft.transform, new Vector3(0f, 0.65f, -1.9f),
             new Vector3(0.12f, 1.1f, 0.8f), aircraftMaterial);
         GameObject marker = CreatePrimitive("Overhead Event Marker", PrimitiveType.Sphere, root.transform,
-            new Vector3(0f, 13f, 3f), Vector3.one * 0.08f, markerMaterial);
-        Transform focus = CreateFocusPoint("Aircraft Focus", root.transform, new Vector3(0f, 13f, 3f));
+            new Vector3(0f, 12.5f, 10f), Vector3.one * 0.08f, markerMaterial);
+        Transform focus = CreateFocusPoint("Aircraft Focus", root.transform, new Vector3(0f, 12.5f, 10f));
         AudioSource audio = aircraft.AddComponent<AudioSource>();
         AircraftScenario scenario = root.AddComponent<AircraftScenario>();
         scenario.ConfigureBase(ExperimentSceneType.Aircraft, audio, focus);

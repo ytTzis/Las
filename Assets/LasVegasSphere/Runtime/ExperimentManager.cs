@@ -107,7 +107,7 @@ public sealed class ExperimentManager : MonoBehaviour
         if (scheduler == null || activeScenario == null) return;
         scheduler.Schedule(activeScenario, offsetIndex);
         trialInProgress = true;
-        trialReadyDspTime = scheduler.LastVisualDspTime + 2.2;
+        trialReadyDspTime = scheduler.LastVisualDspTime + 2.5;
         status = blind ? "Trial playing..." :
             "Playing " + activeScenario.SceneType + " / " + seatManager.CurrentZone + " / " +
             DspEventScheduler.OffsetsMilliseconds[offsetIndex].ToString("+0;-0;0") + " ms";
