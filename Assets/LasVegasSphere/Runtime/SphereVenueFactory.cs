@@ -15,12 +15,13 @@ public static class SphereVenueFactory
         Material aircraft = MakeMaterial("Aircraft", new Color(0.28f, 0.32f, 0.38f), 0.75f, 0.65f);
 
         CreateMeshObject("Spherical LED Screen", root.transform,
-            CreateSphericalSector(28f, 34, 72, 6f, 122f, -112f, 112f), screenMaterial,
-            new Vector3(0f, -6f, 6f));
-        // A slightly larger shell is visible beyond the screen edges.
+            CreateSphericalSector(32f, 48, 112, 0f, 140f, -179.5f, 179.5f), screenMaterial,
+            new Vector3(0f, -7f, 7f));
+        // The LED surface now closes over the zenith and wraps almost all the
+        // way around the audience. Its tiny rear seam stays behind the seats.
         CreateMeshObject("Outer Acoustic Shell", root.transform,
-            CreateSphericalSector(28.35f, 24, 48, 4f, 130f, -120f, 120f), dark,
-            new Vector3(0f, -6f, 6f));
+            CreateSphericalSector(32.35f, 36, 88, 0f, 146f, -179.8f, 179.8f), dark,
+            new Vector3(0f, -7f, 7f));
 
         BuildFloor(root.transform, dark);
         BuildStage(root.transform, stage, cyan);
