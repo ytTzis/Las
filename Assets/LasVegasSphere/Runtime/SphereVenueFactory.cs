@@ -14,9 +14,19 @@ public static class SphereVenueFactory
         Material orange = MakeMaterial("ExplosionOrange", new Color(1f, 0.16f, 0.01f), 0.1f, 0.2f, true);
         Material aircraft = MakeMaterial("Aircraft", new Color(0.28f, 0.32f, 0.38f), 0.75f, 0.65f);
 
-        CreateMeshObject("Spherical LED Screen", root.transform,
-            CreateSphericalSector(32f, 48, 112, 0f, 140f, -179.5f, 179.5f), screenMaterial,
-            new Vector3(0f, -7f, 7f));
+        const float screenRadius = 32f;
+        Vector3 screenCenter = new Vector3(0f, -7f, 7f);
+        // The old LED mesh continued far below the floor. Because its UVs also
+        // continued down there, the seating platform hid almost half of every
+        // video. End the actual display at floor level so the full 0-1 video UV
+        // range is distributed across the visible dome instead.
+        float floorPolarAngle = Mathf.Acos(
+            Mathf.Clamp((0f - screenCenter.y) / screenRadius, -1f, 1f)) * Mathf.Rad2Deg;
+        GameObject sphericalScreen = CreateMeshObject("Spherical LED Screen", root.transform,
+            CreateSphericalSector(screenRadius, 36, 112, 0f, floorPolarAngle, -179.5f, 179.5f), screenMaterial,
+            screenCenter);
+        sphericalScreen.AddComponent<UnityEngine.Video.VideoPlayer>();
+        sphericalScreen.AddComponent<SphericalVideoScreen>();
         // The LED surface now closes over the zenith and wraps almost all the
         // way around the audience. Its tiny rear seam stays behind the seats.
         CreateMeshObject("Outer Acoustic Shell", root.transform,
