@@ -12,6 +12,8 @@ public abstract class ExperimentScenarioBase : MonoBehaviour
 
     public ExperimentSceneType SceneType { get { return sceneType; } }
     public Transform FocusPoint { get { return focusPoint != null ? focusPoint : transform; } }
+    public AudioSource EventAudioSource { get { return eventAudioSource; } }
+    protected bool UsesExternalMediaAudio { get; private set; }
 
     public void ConfigureBase(ExperimentSceneType type, AudioSource source, Transform focus)
     {
@@ -40,6 +42,7 @@ public abstract class ExperimentScenarioBase : MonoBehaviour
     public virtual double ScheduleAudio(double audioDspTime)
     {
         ConfigureSpatialAudio();
+        if (UsesExternalMediaAudio) return audioDspTime;
         if (eventAudioSource == null) return audioDspTime;
         if (eventClip == null) eventClip = CreateFallbackClip(sceneType);
         eventAudioSource.clip = eventClip;
@@ -48,6 +51,20 @@ public abstract class ExperimentScenarioBase : MonoBehaviour
     }
 
     public void SetEventClip(AudioClip clip) { eventClip = clip; }
+
+    public void SetExternalMediaAudio(bool enabled)
+    {
+        UsesExternalMediaAudio = enabled;
+        if (enabled && eventAudioSource != null) eventAudioSource.Stop();
+    }
+
+    public void SetPlaceholderVisualsVisible(bool visible)
+    {
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < renderers.Length; i++) renderers[i].enabled = visible;
+        Light[] lights = GetComponentsInChildren<Light>(true);
+        for (int i = 0; i < lights.Length; i++) lights[i].enabled = visible;
+    }
 
     protected virtual void Update()
     {

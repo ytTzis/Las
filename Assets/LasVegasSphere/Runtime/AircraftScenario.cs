@@ -19,6 +19,7 @@ public sealed class AircraftScenario : ExperimentScenarioBase
 
     public override double ScheduleAudio(double audioDspTime)
     {
+        if (UsesExternalMediaAudio) return base.ScheduleAudio(audioDspTime);
         // For the aircraft, the tested offset applies to the complete moving
         // sound track. At 0 ms the engine begins exactly when the aircraft
         // starts moving from the left side of the screen.

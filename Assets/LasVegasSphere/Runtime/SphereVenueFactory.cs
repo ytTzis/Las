@@ -26,7 +26,7 @@ public static class SphereVenueFactory
             CreateSphericalSector(screenRadius, 36, 112, 0f, floorPolarAngle, -179.5f, 179.5f), screenMaterial,
             screenCenter);
         sphericalScreen.AddComponent<UnityEngine.Video.VideoPlayer>();
-        sphericalScreen.AddComponent<SphericalVideoScreen>();
+        SphericalVideoScreen sphericalVideo = sphericalScreen.AddComponent<SphericalVideoScreen>();
         // The LED surface now closes over the zenith and wraps almost all the
         // way around the audience. Its tiny rear seam stays behind the seats.
         CreateMeshObject("Outer Acoustic Shell", root.transform,
@@ -38,7 +38,7 @@ public static class SphereVenueFactory
         BuildAudience(root.transform, dark);
         BuildLights(root.transform);
         Camera camera = ConfigureCamera(existingCamera, root.transform);
-        BuildExperimentSystem(root.transform, camera, cyan, magenta, orange, aircraft, stage);
+        BuildExperimentSystem(root.transform, camera, cyan, magenta, orange, aircraft, stage, sphericalVideo);
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
         RenderSettings.ambientSkyColor = new Color(0.08f, 0.12f, 0.2f);
         RenderSettings.ambientEquatorColor = new Color(0.03f, 0.04f, 0.08f);
@@ -112,7 +112,8 @@ public static class SphereVenueFactory
     }
 
     private static void BuildExperimentSystem(Transform root, Camera camera, Material cyan,
-        Material magenta, Material orange, Material aircraftMaterial, Material buildingMaterial)
+        Material magenta, Material orange, Material aircraftMaterial, Material buildingMaterial,
+        SphericalVideoScreen sphericalVideo)
     {
         GameObject systemRoot = new GameObject("Experiment System");
         systemRoot.transform.SetParent(root, false);
@@ -145,7 +146,7 @@ public static class SphereVenueFactory
         ClapScenario clap = BuildClapScenario(scenariosRoot, cyan, magenta);
         ExplosionScenario explosion = BuildExplosionScenario(scenariosRoot, orange, buildingMaterial);
         AircraftScenario aircraft = BuildAircraftScenario(scenariosRoot, aircraftMaterial, cyan);
-        manager.Configure(scheduler, seats, new ExperimentScenarioBase[] { clap, explosion, aircraft });
+        manager.Configure(scheduler, seats, new ExperimentScenarioBase[] { clap, explosion, aircraft }, sphericalVideo);
 
         clap.gameObject.SetActive(true);
         explosion.gameObject.SetActive(false);

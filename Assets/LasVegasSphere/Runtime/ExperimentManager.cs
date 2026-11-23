@@ -10,6 +10,7 @@ public sealed class ExperimentManager : MonoBehaviour
 {
     [SerializeField] private DspEventScheduler scheduler;
     [SerializeField] private SeatPositionManager seatManager;
+    [SerializeField] private SphericalVideoScreen videoScreen;
     [SerializeField] private ExperimentScenarioBase[] scenarios;
     [SerializeField] private ExperimentRunMode runMode = ExperimentRunMode.Debug;
     [SerializeField, Range(0, 4)] private int debugOffsetIndex = 2;
@@ -25,11 +26,12 @@ public sealed class ExperimentManager : MonoBehaviour
     private string status = "Debug mode ready";
 
     public void Configure(DspEventScheduler eventScheduler, SeatPositionManager positions,
-        ExperimentScenarioBase[] availableScenarios)
+        ExperimentScenarioBase[] availableScenarios, SphericalVideoScreen sphericalVideoScreen)
     {
         scheduler = eventScheduler;
         seatManager = positions;
         scenarios = availableScenarios;
+        videoScreen = sphericalVideoScreen;
     }
 
     private void Start()
@@ -96,8 +98,15 @@ public sealed class ExperimentManager : MonoBehaviour
         {
             bool selected = scenarios[i] != null && scenarios[i].SceneType == scene;
             if (scenarios[i] != null) scenarios[i].gameObject.SetActive(selected);
-            if (selected) activeScenario = scenarios[i];
+            if (selected)
+            {
+                activeScenario = scenarios[i];
+                bool hasVideo = videoScreen != null && videoScreen.HasSceneVideo(scene);
+                activeScenario.SetPlaceholderVisualsVisible(!hasVideo);
+                activeScenario.SetExternalMediaAudio(videoScreen != null && videoScreen.HasEmbeddedAudio(scene));
+            }
         }
+        if (videoScreen != null) videoScreen.SelectScene(scene);
         if (activeScenario != null && seatManager != null)
             seatManager.Apply(seat);
     }
@@ -106,8 +115,13 @@ public sealed class ExperimentManager : MonoBehaviour
     {
         if (scheduler == null || activeScenario == null) return;
         scheduler.Schedule(activeScenario, offsetIndex);
+        double mediaReadyDspTime = scheduler.LastVisualDspTime + 2.5;
+        if (videoScreen != null)
+            mediaReadyDspTime = videoScreen.ScheduleTrial(activeScenario.SceneType, scheduler.LastVisualDspTime,
+                DspEventScheduler.OffsetsMilliseconds[offsetIndex], activeScenario.EventAudioSource,
+                !blind);
         trialInProgress = true;
-        trialReadyDspTime = scheduler.LastVisualDspTime + 2.5;
+        trialReadyDspTime = Math.Max(scheduler.LastVisualDspTime + 2.5, mediaReadyDspTime);
         status = blind ? "Trial playing..." :
             "Playing " + activeScenario.SceneType + " / " + seatManager.CurrentZone + " / " +
             DspEventScheduler.OffsetsMilliseconds[offsetIndex].ToString("+0;-0;0") + " ms";

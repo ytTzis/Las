@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Video;
 
 public static class LasVegasSphereSceneBuilder
 {
@@ -15,6 +16,7 @@ public static class LasVegasSphereSceneBuilder
     {
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         GameObject root = SphereVenueFactory.Build();
+        AssignExperimentVideos(root);
 
         // Generated assets are fully reproducible. Replacing this folder keeps
         // repeated builds from accumulating duplicate materials and meshes.
@@ -28,6 +30,16 @@ public static class LasVegasSphereSceneBuilder
         EditorUtility.DisplayDialog("Las Vegas Sphere",
             "Editable venue created and saved to:\n" + ScenePath +
             "\n\nPress Play. Use Q/W/E for scenes, 1-5 for offsets, and Space to play.", "OK");
+    }
+
+    private static void AssignExperimentVideos(GameObject root)
+    {
+        SphericalVideoScreen screen = root.GetComponentInChildren<SphericalVideoScreen>(true);
+        if (screen == null) return;
+        screen.ConfigureExperimentVideos(
+            AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/Clap.mp4"),
+            AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/Explosion.mp4"),
+            AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/Aircraft.mp4"));
     }
 
     private static void PersistGeneratedAssets(GameObject root)
