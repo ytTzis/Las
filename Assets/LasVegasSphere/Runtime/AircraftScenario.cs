@@ -7,8 +7,8 @@ public sealed class AircraftScenario : ExperimentScenarioBase
     [SerializeField] private Vector3 startPoint = new Vector3(-24f, 12.5f, 10f);
     [SerializeField] private Vector3 overheadPoint = new Vector3(0f, 12.5f, 10f);
     [SerializeField] private Vector3 endPoint = new Vector3(24f, 12.5f, 10f);
-    [SerializeField, Min(0.5f)] private float approachSeconds = 1.8f;
-    [SerializeField, Min(0.5f)] private float departureSeconds = 1.8f;
+    [SerializeField, Min(0.5f)] private float approachSeconds = 1.0f;
+    [SerializeField, Min(0.5f)] private float departureSeconds = 1.1f;
 
     public void Configure(Transform aircraftTransform, Renderer marker)
     {

@@ -54,8 +54,12 @@ public abstract class ExperimentScenarioBase : MonoBehaviour
 
     public void SetExternalMediaAudio(bool enabled)
     {
+        bool changed = UsesExternalMediaAudio != enabled;
         UsesExternalMediaAudio = enabled;
-        if (enabled && eventAudioSource != null) eventAudioSource.Stop();
+        // Seat changes re-apply the same condition so the AudioListener can
+        // move. Do not stop an already scheduled WAV unless the audio mode
+        // itself actually changed.
+        if (changed && enabled && eventAudioSource != null) eventAudioSource.Stop();
     }
 
     public void SetPlaceholderVisualsVisible(bool visible)

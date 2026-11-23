@@ -13,14 +13,16 @@ public enum SphericalVideoProjection
 public sealed class ExperimentVideoCue
 {
     public VideoClip clip;
+    public AudioClip audioClip;
     [Min(0f)] public float eventTimeSeconds;
     [Min(0f)] public float stopTimeSeconds;
     [Tooltip("Moves this clip inside the dome. Negative Y moves the picture upward toward screen centre.")]
     public Vector2 framingOffset;
 
-    public ExperimentVideoCue(VideoClip source, float eventTime, float stopTime, Vector2 offset)
+    public ExperimentVideoCue(VideoClip source, AudioClip audio, float eventTime, float stopTime, Vector2 offset)
     {
         clip = source;
+        audioClip = audio;
         eventTimeSeconds = eventTime;
         stopTimeSeconds = stopTime;
         framingOffset = offset;
@@ -29,7 +31,7 @@ public sealed class ExperimentVideoCue
 
 /// <summary>
 /// Presents scene-specific video on the spherical LED surface. Visual frames
-/// and the embedded soundtrack use separate VideoPlayers so the soundtrack can
+/// and 48 kHz PCM audio are scheduled independently so the soundtrack can
 /// receive the experiment's -100..+100 ms offset without moving the picture.
 /// </summary>
 [DisallowMultipleComponent]
@@ -38,12 +40,12 @@ public sealed class ExperimentVideoCue
 public sealed class SphericalVideoScreen : MonoBehaviour
 {
     [Header("Experiment Videos")]
-    [SerializeField] private ExperimentVideoCue clap = new ExperimentVideoCue(null, 0.40f, 0.82f, new Vector2(0.16f, 0.20f));
-    [SerializeField] private ExperimentVideoCue explosion = new ExperimentVideoCue(null, 1.36f, 3.86f, Vector2.zero);
-    [SerializeField] private ExperimentVideoCue aircraft = new ExperimentVideoCue(null, 1.00f, 2.10f, Vector2.zero);
+    [SerializeField] private ExperimentVideoCue clap = new ExperimentVideoCue(null, null, 24f / 60f, 49f / 60f, new Vector2(0.16f, 0.20f));
+    [SerializeField] private ExperimentVideoCue explosion = new ExperimentVideoCue(null, null, 82f / 60f, 232f / 60f, Vector2.zero);
+    [SerializeField] private ExperimentVideoCue aircraft = new ExperimentVideoCue(null, null, 60f / 60f, 126f / 60f, Vector2.zero);
 
     [Header("Playback")]
-    [SerializeField] private bool useEmbeddedAudioForExperiment = true;
+    [SerializeField] private bool useScheduledPcmAudio = true;
     [SerializeField] private bool flipVertically;
     [SerializeField, Range(0f, 4f)] private float videoBrightness = 1f;
 
@@ -65,7 +67,6 @@ public sealed class SphericalVideoScreen : MonoBehaviour
     private static readonly int VideoFramingOffsetId = Shader.PropertyToID("_VideoFramingOffset");
 
     private VideoPlayer visualPlayer;
-    private VideoPlayer audioPlayer;
     private Material screenMaterial;
     private RenderTexture videoTexture;
     private ExperimentSceneType selectedScene;
@@ -73,7 +74,6 @@ public sealed class SphericalVideoScreen : MonoBehaviour
     private AudioSource activeAudioSource;
     private bool trialScheduled;
     private bool visualStarted;
-    private bool audioStarted;
     private bool visualFinished;
     private bool audioFinished;
     private double visualStartDspTime;
@@ -83,11 +83,13 @@ public sealed class SphericalVideoScreen : MonoBehaviour
     public VideoPlayer Player => visualPlayer;
     public bool HasVideo => activeCue != null && activeCue.clip != null;
 
-    public void ConfigureExperimentVideos(VideoClip clapClip, VideoClip explosionClip, VideoClip aircraftClip)
+    public void ConfigureExperimentMedia(VideoClip clapClip, AudioClip clapAudio,
+        VideoClip explosionClip, AudioClip explosionAudio,
+        VideoClip aircraftClip, AudioClip aircraftAudio)
     {
-        clap = new ExperimentVideoCue(clapClip, 0.40f, 0.82f, new Vector2(0.16f, 0.20f));
-        explosion = new ExperimentVideoCue(explosionClip, 1.36f, 3.86f, Vector2.zero);
-        aircraft = new ExperimentVideoCue(aircraftClip, 1.00f, 2.10f, Vector2.zero);
+        clap = new ExperimentVideoCue(clapClip, clapAudio, 24f / 60f, 49f / 60f, new Vector2(0.16f, 0.20f));
+        explosion = new ExperimentVideoCue(explosionClip, explosionAudio, 82f / 60f, 232f / 60f, Vector2.zero);
+        aircraft = new ExperimentVideoCue(aircraftClip, aircraftAudio, 60f / 60f, 126f / 60f, Vector2.zero);
     }
 
     public bool HasSceneVideo(ExperimentSceneType scene)
@@ -96,16 +98,15 @@ public sealed class SphericalVideoScreen : MonoBehaviour
         return cue != null && cue.clip != null;
     }
 
-    public bool HasEmbeddedAudio(ExperimentSceneType scene)
+    public bool HasScheduledAudio(ExperimentSceneType scene)
     {
         ExperimentVideoCue cue = GetCue(scene);
-        return useEmbeddedAudioForExperiment && cue != null && cue.clip != null && cue.clip.audioTrackCount > 0;
+        return useScheduledPcmAudio && cue != null && cue.audioClip != null;
     }
 
     private void Awake()
     {
         visualPlayer = GetComponent<VideoPlayer>();
-        audioPlayer = gameObject.AddComponent<VideoPlayer>();
         screenMaterial = GetComponent<Renderer>().material;
         CreateTargetTexture();
         ConfigurePlayers();
@@ -138,7 +139,6 @@ public sealed class SphericalVideoScreen : MonoBehaviour
         if (HasVideo)
         {
             visualPlayer.Prepare();
-            if (HasEmbeddedAudio(scene)) audioPlayer.Prepare();
         }
     }
 
@@ -154,9 +154,8 @@ public sealed class SphericalVideoScreen : MonoBehaviour
         scheduledStopTime = playFullClip ? activeCue.clip.length : GetStopTime(activeCue);
         trialScheduled = true;
         visualStarted = false;
-        audioStarted = false;
         visualFinished = false;
-        audioFinished = !HasEmbeddedAudio(scene);
+        audioFinished = !HasScheduledAudio(scene) || activeAudioSource == null;
 
         visualPlayer.Stop();
         visualPlayer.timeReference = VideoTimeReference.ExternalTime;
@@ -166,14 +165,10 @@ public sealed class SphericalVideoScreen : MonoBehaviour
 
         if (!audioFinished)
         {
-            audioPlayer.Stop();
-            audioPlayer.timeReference = VideoTimeReference.ExternalTime;
-            audioPlayer.externalReferenceTime = 0.0;
-            audioPlayer.time = 0.0;
-            audioPlayer.controlledAudioTrackCount = 1;
-            audioPlayer.EnableAudioTrack(0, true);
-            audioPlayer.SetTargetAudioSource(0, activeAudioSource);
-            if (!audioPlayer.isPrepared) audioPlayer.Prepare();
+            activeAudioSource.Stop();
+            activeAudioSource.clip = activeCue.audioClip;
+            activeAudioSource.PlayScheduled(audioStartDspTime);
+            activeAudioSource.SetScheduledEndTime(audioStartDspTime + scheduledStopTime);
         }
         SetVideoVisible(false);
         double visualEnd = visualStartDspTime + scheduledStopTime;
@@ -212,18 +207,9 @@ public sealed class SphericalVideoScreen : MonoBehaviour
     {
         if (audioFinished) return;
         double contentTime = dspTime - audioStartDspTime;
-        if (!audioStarted && contentTime >= 0.0 && audioPlayer.isPrepared)
-        {
-            audioPlayer.externalReferenceTime = contentTime;
-            audioPlayer.time = contentTime;
-            audioPlayer.Play();
-            audioStarted = true;
-        }
-        if (!audioStarted) return;
-        audioPlayer.externalReferenceTime = Math.Max(0.0, contentTime);
         if (contentTime >= scheduledStopTime)
         {
-            audioPlayer.Stop();
+            if (activeAudioSource != null) activeAudioSource.Stop();
             audioFinished = true;
         }
     }
@@ -238,19 +224,12 @@ public sealed class SphericalVideoScreen : MonoBehaviour
         visualPlayer.audioOutputMode = VideoAudioOutputMode.None;
         visualPlayer.errorReceived += HandleError;
 
-        audioPlayer.playOnAwake = false;
-        audioPlayer.isLooping = false;
-        audioPlayer.skipOnDrop = false;
-        audioPlayer.renderMode = VideoRenderMode.APIOnly;
-        audioPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
-        audioPlayer.errorReceived += HandleError;
     }
 
     private void ConfigureSources()
     {
         VideoClip clip = activeCue != null ? activeCue.clip : null;
         visualPlayer.clip = clip;
-        audioPlayer.clip = clip;
     }
 
     private ExperimentVideoCue GetCue(ExperimentSceneType scene)
@@ -271,11 +250,10 @@ public sealed class SphericalVideoScreen : MonoBehaviour
     {
         trialScheduled = false;
         visualStarted = false;
-        audioStarted = false;
         visualFinished = true;
         audioFinished = true;
         if (visualPlayer != null) visualPlayer.Stop();
-        if (audioPlayer != null) audioPlayer.Stop();
+        if (activeAudioSource != null) activeAudioSource.Stop();
         SetVideoVisible(false);
     }
 
@@ -322,7 +300,6 @@ public sealed class SphericalVideoScreen : MonoBehaviour
     private void OnDestroy()
     {
         if (visualPlayer != null) visualPlayer.errorReceived -= HandleError;
-        if (audioPlayer != null) audioPlayer.errorReceived -= HandleError;
         if (videoTexture != null)
         {
             videoTexture.Release();

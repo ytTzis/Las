@@ -14,9 +14,10 @@ public static class LasVegasSphereSceneBuilder
     [MenuItem("Tools/Las Vegas Sphere/Build Editable Scene")]
     public static void BuildEditableScene()
     {
+        ConfigureExperimentAudioImports();
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         GameObject root = SphereVenueFactory.Build();
-        AssignExperimentVideos(root);
+        AssignExperimentMedia(root);
 
         // Generated assets are fully reproducible. Replacing this folder keeps
         // repeated builds from accumulating duplicate materials and meshes.
@@ -32,14 +33,40 @@ public static class LasVegasSphereSceneBuilder
             "\n\nPress Play. Use Q/W/E for scenes, 1-5 for offsets, and Space to play.", "OK");
     }
 
-    private static void AssignExperimentVideos(GameObject root)
+    private static void ConfigureExperimentAudioImports()
+    {
+        ConfigurePcmAudio("Assets/LasVegasSphere/Media/Audio/Clap_48k_Mono.wav");
+        ConfigurePcmAudio("Assets/LasVegasSphere/Media/Audio/Explosion_48k_Mono.wav");
+        ConfigurePcmAudio("Assets/LasVegasSphere/Media/Audio/Aircraft_48k_Mono.wav");
+    }
+
+    private static void ConfigurePcmAudio(string path)
+    {
+        AudioImporter importer = AssetImporter.GetAtPath(path) as AudioImporter;
+        if (importer == null) return;
+        AudioImporterSampleSettings settings = importer.defaultSampleSettings;
+        settings.loadType = AudioClipLoadType.DecompressOnLoad;
+        settings.compressionFormat = AudioCompressionFormat.PCM;
+        settings.sampleRateSetting = AudioSampleRateSetting.OverrideSampleRate;
+        settings.sampleRateOverride = 48000;
+        settings.preloadAudioData = true;
+        importer.defaultSampleSettings = settings;
+        importer.forceToMono = true;
+        importer.loadInBackground = false;
+        importer.SaveAndReimport();
+    }
+
+    private static void AssignExperimentMedia(GameObject root)
     {
         SphericalVideoScreen screen = root.GetComponentInChildren<SphericalVideoScreen>(true);
         if (screen == null) return;
-        screen.ConfigureExperimentVideos(
-            AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/Clap.mp4"),
-            AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/Explosion.mp4"),
-            AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/Aircraft.mp4"));
+        screen.ConfigureExperimentMedia(
+            AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/LasVegasSphere/Media/Videos/Clap_60fps_Silent.mp4"),
+            AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LasVegasSphere/Media/Audio/Clap_48k_Mono.wav"),
+            AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/LasVegasSphere/Media/Videos/Explosion_60fps_Silent.mp4"),
+            AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LasVegasSphere/Media/Audio/Explosion_48k_Mono.wav"),
+            AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/LasVegasSphere/Media/Videos/Aircraft_60fps_Silent.mp4"),
+            AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LasVegasSphere/Media/Audio/Aircraft_48k_Mono.wav"));
     }
 
     private static void PersistGeneratedAssets(GameObject root)

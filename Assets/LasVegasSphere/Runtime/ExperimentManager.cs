@@ -103,7 +103,7 @@ public sealed class ExperimentManager : MonoBehaviour
                 activeScenario = scenarios[i];
                 bool hasVideo = videoScreen != null && videoScreen.HasSceneVideo(scene);
                 activeScenario.SetPlaceholderVisualsVisible(!hasVideo);
-                activeScenario.SetExternalMediaAudio(videoScreen != null && videoScreen.HasEmbeddedAudio(scene));
+                activeScenario.SetExternalMediaAudio(videoScreen != null && videoScreen.HasScheduledAudio(scene));
             }
         }
         if (videoScreen != null) videoScreen.SelectScene(scene);
