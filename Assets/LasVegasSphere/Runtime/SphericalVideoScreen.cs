@@ -32,7 +32,7 @@ public sealed class ExperimentVideoCue
 /// <summary>
 /// Presents scene-specific video on the spherical LED surface. Visual frames
 /// and 48 kHz PCM audio are scheduled independently so the soundtrack can
-/// receive the experiment's -100..+100 ms offset without moving the picture.
+/// receive the experiment's -150..+150 ms offset without moving the picture.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Renderer))]

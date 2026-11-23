@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 public sealed class DspEventScheduler : MonoBehaviour
 {
-    public static readonly int[] OffsetsMilliseconds = { -100, -50, 0, 50, 100 };
+    public static readonly int[] OffsetsMilliseconds = { -150, -75, 0, 75, 150 };
 
     [SerializeField, Min(0.5f)] private float scheduleLeadSeconds = 2.2f;
 
