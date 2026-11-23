@@ -37,5 +37,6 @@ Material:
     - _VideoBrightness: 1
     - _VideoProjectionMode: 0
     - _VisibleDomeAngle: 77.37
-    m_Colors: []
+    m_Colors:
+    - _VideoFramingOffset: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []

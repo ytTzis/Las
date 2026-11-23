@@ -15,12 +15,15 @@ public sealed class ExperimentVideoCue
     public VideoClip clip;
     [Min(0f)] public float eventTimeSeconds;
     [Min(0f)] public float stopTimeSeconds;
+    [Tooltip("Moves this clip inside the dome. Negative Y moves the picture upward toward screen centre.")]
+    public Vector2 framingOffset;
 
-    public ExperimentVideoCue(VideoClip source, float eventTime, float stopTime)
+    public ExperimentVideoCue(VideoClip source, float eventTime, float stopTime, Vector2 offset)
     {
         clip = source;
         eventTimeSeconds = eventTime;
         stopTimeSeconds = stopTime;
+        framingOffset = offset;
     }
 }
 
@@ -35,9 +38,9 @@ public sealed class ExperimentVideoCue
 public sealed class SphericalVideoScreen : MonoBehaviour
 {
     [Header("Experiment Videos")]
-    [SerializeField] private ExperimentVideoCue clap = new ExperimentVideoCue(null, 0.40f, 0.82f);
-    [SerializeField] private ExperimentVideoCue explosion = new ExperimentVideoCue(null, 1.36f, 3.86f);
-    [SerializeField] private ExperimentVideoCue aircraft = new ExperimentVideoCue(null, 1.00f, 2.10f);
+    [SerializeField] private ExperimentVideoCue clap = new ExperimentVideoCue(null, 0.40f, 0.82f, new Vector2(0.16f, 0.20f));
+    [SerializeField] private ExperimentVideoCue explosion = new ExperimentVideoCue(null, 1.36f, 3.86f, Vector2.zero);
+    [SerializeField] private ExperimentVideoCue aircraft = new ExperimentVideoCue(null, 1.00f, 2.10f, Vector2.zero);
 
     [Header("Playback")]
     [SerializeField] private bool useEmbeddedAudioForExperiment = true;
@@ -59,6 +62,7 @@ public sealed class SphericalVideoScreen : MonoBehaviour
     private static readonly int FlipVideoYId = Shader.PropertyToID("_FlipVideoY");
     private static readonly int VideoProjectionModeId = Shader.PropertyToID("_VideoProjectionMode");
     private static readonly int VisibleDomeAngleId = Shader.PropertyToID("_VisibleDomeAngle");
+    private static readonly int VideoFramingOffsetId = Shader.PropertyToID("_VideoFramingOffset");
 
     private VideoPlayer visualPlayer;
     private VideoPlayer audioPlayer;
@@ -81,9 +85,9 @@ public sealed class SphericalVideoScreen : MonoBehaviour
 
     public void ConfigureExperimentVideos(VideoClip clapClip, VideoClip explosionClip, VideoClip aircraftClip)
     {
-        clap = new ExperimentVideoCue(clapClip, 0.40f, 0.82f);
-        explosion = new ExperimentVideoCue(explosionClip, 1.36f, 3.86f);
-        aircraft = new ExperimentVideoCue(aircraftClip, 1.00f, 2.10f);
+        clap = new ExperimentVideoCue(clapClip, 0.40f, 0.82f, new Vector2(0.16f, 0.20f));
+        explosion = new ExperimentVideoCue(explosionClip, 1.36f, 3.86f, Vector2.zero);
+        aircraft = new ExperimentVideoCue(aircraftClip, 1.00f, 2.10f, Vector2.zero);
     }
 
     public bool HasSceneVideo(ExperimentSceneType scene)
@@ -128,6 +132,7 @@ public sealed class SphericalVideoScreen : MonoBehaviour
 
         selectedScene = scene;
         activeCue = requestedCue;
+        ApplyCueFraming();
         CancelPlayback();
         ConfigureSources();
         if (HasVideo)
@@ -291,6 +296,16 @@ public sealed class SphericalVideoScreen : MonoBehaviour
         screenMaterial.SetFloat(FlipVideoYId, flipVertically ? 1f : 0f);
         screenMaterial.SetFloat(VideoProjectionModeId, (float)projection);
         screenMaterial.SetFloat(VisibleDomeAngleId, visibleDomeAngle);
+        screenMaterial.SetVector(VideoFramingOffsetId, Vector4.zero);
+    }
+
+    private void ApplyCueFraming()
+    {
+        if (screenMaterial != null)
+        {
+            Vector2 offset = activeCue != null ? activeCue.framingOffset : Vector2.zero;
+            screenMaterial.SetVector(VideoFramingOffsetId, new Vector4(offset.x, offset.y, 0f, 0f));
+        }
     }
 
     private void HandleError(VideoPlayer source, string message)

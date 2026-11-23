@@ -8,6 +8,7 @@ Shader "LasVegasSphere/AnimatedInteriorScreen"
         _FlipVideoY ("Flip Video Vertically", Range(0, 1)) = 0
         _VideoProjectionMode ("Video Projection Mode", Range(0, 2)) = 0
         _VisibleDomeAngle ("Visible Dome Angle", Range(30, 180)) = 77.37
+        _VideoFramingOffset ("Per-Clip Framing Offset", Vector) = (0, 0, 0, 0)
         _Brightness ("Brightness", Range(0, 6)) = 2.4
         _Density ("Symbol Density", Range(10, 120)) = 58
         _Speed ("Scroll Speed", Range(0, 2)) = 0.32
@@ -29,6 +30,7 @@ Shader "LasVegasSphere/AnimatedInteriorScreen"
             sampler2D _VideoTex;
             float _UseVideo, _VideoBrightness, _FlipVideoY;
             float _VideoProjectionMode, _VisibleDomeAngle;
+            float2 _VideoFramingOffset;
             float _Brightness, _Density, _Speed;
             v2f vert(appdata v) { v2f o; o.pos = UnityObjectToClipPos(v.vertex); o.uv = v.uv; return o; }
             float hash21(float2 p) { p = frac(p * float2(123.34, 456.21)); p += dot(p, p + 45.32); return frac(p.x * p.y); }
@@ -49,6 +51,7 @@ Shader "LasVegasSphere/AnimatedInteriorScreen"
                     float polarDegrees = (1.0 - i.uv.y) * _VisibleDomeAngle;
                     videoUV = float2(i.uv.x, 1.0 - polarDegrees / 180.0);
                 }
+                videoUV += _VideoFramingOffset;
                 videoUV.y = lerp(videoUV.y, 1.0 - videoUV.y, _FlipVideoY);
                 fixed4 videoColor = tex2D(_VideoTex, videoUV) * _VideoBrightness;
 
